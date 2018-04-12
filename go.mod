@@ -1,4 +1,4 @@
-module github.com/terraform-providers/terraform-provider-gitlab
+module github.com/claranet/terraform-provider-gitlab
 
 require (
 	cloud.google.com/go v0.39.0 // indirect
@@ -34,3 +34,5 @@ require (
 replace github.com/golang/lint v0.0.0-20190409202823-959b441ac422 => github.com/golang/lint v0.0.0-20190409202823-5614ed5bae6fb75893070bdc0996a68765fdd275
 
 replace sourcegraph.com/sourcegraph/go-diff v0.5.1 => github.com/sourcegraph/go-diff v0.5.1
+
+go 1.13
