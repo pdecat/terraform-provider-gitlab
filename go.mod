@@ -1,4 +1,4 @@
-module github.com/terraform-providers/terraform-provider-gitlab
+module github.com/claranet/terraform-provider-gitlab
 
 require (
 	cloud.google.com/go v0.39.0 // indirect
