@@ -55,6 +55,9 @@ func Provider() terraform.ResourceProvider {
 			"gitlab_user":               resourceGitlabUser(),
 			"gitlab_project_membership": resourceGitlabProjectMembership(),
 		},
+		DataSourcesMap: map[string]*schema.Resource{
+			"gitlab_users": dataSourceGitlabUsers(),
+		},
 
 		ConfigureFunc: providerConfigure,
 	}
