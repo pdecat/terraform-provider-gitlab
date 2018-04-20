@@ -16,19 +16,17 @@ func dataSourceGitlabUser() *schema.Resource {
 				Type:          schema.TypeInt,
 				Computed:      true,
 				Optional:      true,
-				ConflictsWith: []string{"username", "email"},
+				ConflictsWith: []string{"username"},
 			},
 			"username": {
 				Type:          schema.TypeString,
 				Computed:      true,
 				Optional:      true,
-				ConflictsWith: []string{"user_id", "email"},
+				ConflictsWith: []string{"user_id"},
 			},
 			"email": {
-				Type:          schema.TypeString,
-				Computed:      true,
-				Optional:      true,
-				ConflictsWith: []string{"username", "user_id"},
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -66,6 +64,14 @@ func dataSourceGitlabUser() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"organization": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"two_factor_enabled": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -75,31 +81,34 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 	var user *gitlab.User
 	var err error
 
-	// Get user by id
-	if data, ok := d.GetOk("user_id"); ok {
-		userId := data.(int)
-		user, _, err = client.Users.GetUser(userId)
-	} else {
-		// Get user by username or email using search parameter
-		listUsersOptions := &gitlab.ListUsersOptions{}
-		email := d.Get("email").(string)
-		username := d.Get("username").(string)
+	userIdData, userIdOk := d.GetOk("user_id")
+	usernameData, usernameOk := d.GetOk("username")
 
-		if username == "" && email == "" {
-			return fmt.Errorf("one and only one of id, username or email must be set")
+	// Get user by id
+	if userIdOk {
+		user, _, err = client.Users.GetUser(userIdData.(int))
+		if err != nil {
+			return err
 		}
-		if username != "" {
-			listUsersOptions.Search = &username
-		} else {
-			listUsersOptions.Search = &email
+	} else {
+		// Get user by username
+		if !usernameOk {
+			return fmt.Errorf("one and only one of user_id or username must be set")
 		}
+
+		listUsersOptions := &gitlab.ListUsersOptions{}
+		username := usernameData.(string)
+		listUsersOptions.Username = &username
 
 		var users []*gitlab.User
 		users, _, err = client.Users.ListUsers(listUsersOptions)
+		if err != nil {
+			return err
+		}
+		if len(users) == 0 {
+			return fmt.Errorf("couldn't find users with matching username: %s", username)
+		}
 		user = users[0]
-	}
-	if err != nil {
-		return err
 	}
 
 	d.Set("user_id", user.ID)
@@ -114,6 +123,8 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("external", user.External)
 	d.Set("extern_uid", user.ExternUID)
 	d.Set("created_at", user.CreatedAt)
+	d.Set("organization", user.Organization)
+	d.Set("two_factor_enabled", user.TwoFactorEnabled)
 
 	d.SetId(fmt.Sprintf("%d", user.ID))
 	return nil
