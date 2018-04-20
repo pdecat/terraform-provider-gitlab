@@ -90,12 +90,8 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return err
 		}
-	} else {
 		// Get user by username
-		if !usernameOk {
-			return fmt.Errorf("one and only one of user_id or username must be set")
-		}
-
+	} else if usernameOk {
 		listUsersOptions := &gitlab.ListUsersOptions{}
 		username := usernameData.(string)
 		listUsersOptions.Username = &username
@@ -105,10 +101,12 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return err
 		}
-		if len(users) == 0 {
+		if len(users) != 1 {
 			return fmt.Errorf("couldn't find users with matching username: %s", username)
 		}
 		user = users[0]
+	} else {
+		return fmt.Errorf("one and only one of user_id or username must be set")
 	}
 
 	d.Set("user_id", user.ID)
@@ -127,5 +125,6 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("two_factor_enabled", user.TwoFactorEnabled)
 
 	d.SetId(fmt.Sprintf("%d", user.ID))
+
 	return nil
 }
