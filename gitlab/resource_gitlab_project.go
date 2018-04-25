@@ -235,10 +235,9 @@ func resourceGitlabProjectDelete(d *schema.ResourceData, meta interface{}) error
 			if err != nil {
 				if response.StatusCode == 404 {
 					return out, "Deleted", nil
-				} else {
-					log.Printf("[ERROR] Received error: %#v", err)
-					return out, "Error", err
 				}
+				log.Printf("[ERROR] Received error: %#v", err)
+				return out, "Error", err
 			}
 			return out, "Deleting", nil
 		},
