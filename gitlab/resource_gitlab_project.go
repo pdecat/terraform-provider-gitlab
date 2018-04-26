@@ -243,11 +243,12 @@ func resourceGitlabProjectUpdate(d *schema.ResourceData, meta interface{}) error
 		options.SnippetsEnabled = gitlab.Bool(d.Get("snippets_enabled").(bool))
 	}
 
-	log.Printf("[DEBUG] update gitlab project %s", d.Id())
-
-	_, _, err := client.Projects.EditProject(d.Id(), options)
-	if err != nil {
-		return err
+	if *options != (gitlab.EditProjectOptions{}) {
+		log.Printf("[DEBUG] update gitlab project %s", d.Id())
+		_, _, err := client.Projects.EditProject(d.Id(), options)
+		if err != nil {
+			return err
+		}
 	}
 
 	if d.HasChange("shared_with_groups") {
