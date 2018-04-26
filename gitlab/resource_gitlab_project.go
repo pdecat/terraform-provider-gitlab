@@ -89,6 +89,30 @@ func resourceGitlabProject() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"shared_with_groups": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"group_id": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"group_access": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"expires_at": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"group_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -109,6 +133,7 @@ func resourceGitlabProjectSetToState(d *schema.ResourceData, project *gitlab.Pro
 	d.Set("ssh_url_to_repo", project.SSHURLToRepo)
 	d.Set("http_url_to_repo", project.HTTPURLToRepo)
 	d.Set("web_url", project.WebURL)
+	d.Set("shared_with_groups", flattenSharedWithGroupsOptions(project))
 }
 
 func resourceGitlabProjectCreate(d *schema.ResourceData, meta interface{}) error {
@@ -139,6 +164,18 @@ func resourceGitlabProjectCreate(d *schema.ResourceData, meta interface{}) error
 	project, _, err := client.Projects.CreateProject(options)
 	if err != nil {
 		return err
+	}
+
+	if v, ok := d.GetOk("shared_with_groups"); ok {
+		options := expandSharedWithGroupsOptions(v.([]interface{}))
+
+		for _, option := range options {
+			log.Printf("[DEBUG] project shared with group %v", option)
+			_, err := client.Projects.ShareProjectWithGroup(project.ID, option)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	d.SetId(fmt.Sprintf("%d", project.ID))
@@ -213,6 +250,10 @@ func resourceGitlabProjectUpdate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
+	if d.HasChange("shared_with_groups") {
+		updateSharedWithGroups(d, meta)
+	}
+
 	return resourceGitlabProjectRead(d, meta)
 }
 
@@ -251,5 +292,72 @@ func resourceGitlabProjectDelete(d *schema.ResourceData, meta interface{}) error
 	if err != nil {
 		return fmt.Errorf("error waiting for project (%s) to become deleted: %s", d.Id(), err)
 	}
+	return nil
+}
+
+func expandSharedWithGroupsOptions(d []interface{}) []*gitlab.ShareWithGroupOptions {
+	shareWithGroupOptionsList := []*gitlab.ShareWithGroupOptions{}
+
+	for _, config := range d {
+		data := config.(map[string]interface{})
+
+		groupAccess := accessLevelID[data["group_access"].(string)]
+
+		shareWithGroupOptions := &gitlab.ShareWithGroupOptions{
+			GroupID:     gitlab.Int(data["group_id"].(int)),
+			GroupAccess: &groupAccess,
+			ExpiresAt:   gitlab.String(data["expires_at"].(string)),
+		}
+
+		shareWithGroupOptionsList = append(shareWithGroupOptionsList,
+			shareWithGroupOptions)
+	}
+
+	return shareWithGroupOptionsList
+}
+
+func flattenSharedWithGroupsOptions(project *gitlab.Project) []interface{} {
+	sharedWithGroups := project.SharedWithGroups
+	sharedWithGroupsList := []interface{}{}
+
+	for _, option := range sharedWithGroups {
+		values := map[string]interface{}{
+			"group_id":     option.GroupID,
+			"group_access": accessLevel[gitlab.AccessLevelValue(option.GroupAccessLevel)],
+			"group_name":   option.GroupName,
+		}
+
+		sharedWithGroupsList = append(sharedWithGroupsList, values)
+	}
+
+	return sharedWithGroupsList
+}
+
+func updateSharedWithGroups(d *schema.ResourceData, meta interface{}) error {
+	client := meta.(*gitlab.Client)
+
+	// Get existing groups and unshare all of them
+	project, _, err := client.Projects.GetProject(d.Id())
+	if err != nil {
+		return err
+	}
+	for _, group := range project.SharedWithGroups {
+		log.Printf("[DEBUG] update shared_with_group: unshare %v", group)
+		_, err := client.Projects.UnshareProjectFromGroup(d.Id(), group.GroupID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Share project with groups from the new config
+	shareWithGroupOptions := expandSharedWithGroupsOptions(d.Get("shared_with_groups").([]interface{}))
+	for _, group := range shareWithGroupOptions {
+		log.Printf("[DEBUG] update shared_with_group: share %v", group)
+		_, err := client.Projects.ShareProjectWithGroup(d.Id(), group)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
