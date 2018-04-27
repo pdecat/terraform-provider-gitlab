@@ -75,7 +75,15 @@ type MergeRequest struct {
 		State     string     `json:"state"`
 		CreatedAt *time.Time `json:"created_at"`
 	} `json:"merged_by"`
-	MergedAt                 *time.Time `json:"merged_at"`
+	MergedAt *time.Time `json:"merged_at"`
+	ClosedBy struct {
+		ID        int        `json:"id"`
+		Username  string     `json:"username"`
+		Name      string     `json:"name"`
+		State     string     `json:"state"`
+		CreatedAt *time.Time `json:"created_at"`
+	} `json:"closed_by"`
+	ClosedAt                 *time.Time `json:"closed_at"`
 	Subscribed               bool       `json:"subscribed"`
 	SHA                      string     `json:"sha"`
 	MergeCommitSHA           string     `json:"merge_commit_sha"`
@@ -96,6 +104,7 @@ type MergeRequest struct {
 		DeletedFile bool   `json:"deleted_file"`
 	} `json:"changes"`
 	TimeStats *TimeStats `json:"time_stats"`
+	Squash    bool       `json:"squash"`
 }
 
 func (m MergeRequest) String() string {
@@ -105,7 +114,7 @@ func (m MergeRequest) String() string {
 // MergeRequestApprovals represents GitLab merge request approvals.
 //
 // GitLab API docs:
-// https://docs.gitlab.com/ee/api/merge_requests.html#merge-request-approvals
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#merge-request-level-mr-approvals
 type MergeRequestApprovals struct {
 	ID                int        `json:"id"`
 	ProjectID         int        `json:"project_id"`
@@ -116,7 +125,7 @@ type MergeRequestApprovals struct {
 	UpdatedAt         *time.Time `json:"updated_at"`
 	MergeStatus       string     `json:"merge_status"`
 	ApprovalsRequired int        `json:"approvals_required"`
-	ApprovalsMissing  int        `json:"approvals_missing"`
+	ApprovalsLeft     int        `json:"approvals_left"`
 	ApprovedBy        []struct {
 		User struct {
 			Name      string `json:"name"`
@@ -275,7 +284,7 @@ func (s *MergeRequestsService) GetMergeRequest(pid interface{}, mergeRequest int
 // GetMergeRequestApprovals gets information about a merge requests approvals
 //
 // GitLab API docs:
-// https://docs.gitlab.com/ee/api/merge_requests.html#merge-request-approvals
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#merge-request-level-mr-approvals
 func (s *MergeRequestsService) GetMergeRequestApprovals(pid interface{}, mergeRequest int, options ...OptionFunc) (*MergeRequestApprovals, *Response, error) {
 	project, err := parseID(pid)
 	if err != nil {
