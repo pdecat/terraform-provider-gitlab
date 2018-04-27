@@ -344,7 +344,7 @@ func updateSharedWithGroups(d *schema.ResourceData, meta interface{}) error {
 	}
 	for _, group := range project.SharedWithGroups {
 		log.Printf("[DEBUG] update shared_with_group: unshare %v", group)
-		_, err := client.Projects.UnshareProjectFromGroup(d.Id(), group.GroupID)
+		_, err := client.Projects.DeleteSharedProjectFromGroup(d.Id(), group.GroupID)
 		if err != nil {
 			return err
 		}
