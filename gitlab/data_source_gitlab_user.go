@@ -101,8 +101,11 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 		if err != nil {
 			return err
 		}
-		if len(users) != 1 {
-			return fmt.Errorf("couldn't find users with matching username: %s", username)
+
+		if len(users) == 0 {
+			return fmt.Errorf("couldn't find a user matching username: %s", username)
+		} else if len(users) != 1 {
+			return fmt.Errorf("more than one user found matching username: %s", username)
 		}
 		user = users[0]
 	} else {
