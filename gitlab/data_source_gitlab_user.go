@@ -84,18 +84,18 @@ func dataSourceGitlabUserRead(d *schema.ResourceData, meta interface{}) error {
 	userIdData, userIdOk := d.GetOk("user_id")
 	usernameData, usernameOk := d.GetOk("username")
 
-	// Get user by id
 	if userIdOk {
+		// Get user by id
 		user, _, err = client.Users.GetUser(userIdData.(int))
 		if err != nil {
 			return err
 		}
-		// Get user by username
 	} else if usernameOk {
 		listUsersOptions := &gitlab.ListUsersOptions{}
 		username := usernameData.(string)
 		listUsersOptions.Username = &username
 
+		// Get user by username
 		var users []*gitlab.User
 		users, _, err = client.Users.ListUsers(listUsersOptions)
 		if err != nil {
