@@ -331,26 +331,80 @@ func flattenSharedWithGroupsOptions(project *gitlab.Project) []interface{} {
 	return sharedWithGroupsList
 }
 
+func findGroupProjectSharedWith(target *gitlab.ShareWithGroupOptions,
+	groups []*gitlab.ShareWithGroupOptions) (*gitlab.ShareWithGroupOptions, int, error) {
+	for i, group := range groups {
+		if *group.GroupID == *target.GroupID {
+			return group, i, nil
+		}
+	}
+
+	return nil, 0, fmt.Errorf("group not found")
+}
+
+func getGroupsProjectSharedWith(project *gitlab.Project) []*gitlab.ShareWithGroupOptions {
+	sharedGroups := []*gitlab.ShareWithGroupOptions{}
+
+	for _, group := range project.SharedWithGroups {
+		sharedGroups = append(sharedGroups, &gitlab.ShareWithGroupOptions{
+			GroupID: gitlab.Int(group.GroupID),
+			GroupAccess: gitlab.AccessLevel(gitlab.AccessLevelValue(
+				group.GroupAccessLevel)),
+		})
+	}
+
+	return sharedGroups
+}
+
 func updateSharedWithGroups(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*gitlab.Client)
 
-	// Get existing groups and unshare all of them
+	var groupsToUnshare []*gitlab.ShareWithGroupOptions
+	var groupsToShare []*gitlab.ShareWithGroupOptions
+
+	// Get target groups from the TF config and current groups from Gitlab server
+	targetGroups := expandSharedWithGroupsOptions(
+		d.Get("shared_with_groups").([]interface{}))
 	project, _, err := client.Projects.GetProject(d.Id())
 	if err != nil {
 		return err
 	}
-	for _, group := range project.SharedWithGroups {
-		log.Printf("[DEBUG] update shared_with_group: unshare %v", group)
-		_, err := client.Projects.DeleteSharedProjectFromGroup(d.Id(), group.GroupID)
+	currentGroups := getGroupsProjectSharedWith(project)
+
+	for _, targetGroup := range targetGroups {
+		currentGroup, index, err := findGroupProjectSharedWith(targetGroup, currentGroups)
+
+		// If no corresponding group is found, it must be added
+		if err != nil {
+			groupsToShare = append(groupsToShare, targetGroup)
+			continue
+		}
+
+		// If group is different it must be deleted and added again
+		if *targetGroup.GroupAccess != *currentGroup.GroupAccess {
+			groupsToShare = append(groupsToShare, targetGroup)
+			groupsToUnshare = append(groupsToUnshare, targetGroup)
+		}
+
+		// Remove currentGroup from from list
+		currentGroups = append(currentGroups[:index], currentGroups[index+1:]...)
+	}
+
+	// All groups still present in currentGroup must be deleted
+	groupsToUnshare = append(groupsToUnshare, currentGroups...)
+
+	// Unshare groups to delete and update
+	for _, group := range groupsToUnshare {
+		log.Printf("[DEBUG] update shared_with_group: unshare %d", *group.GroupID)
+		_, err := client.Projects.DeleteSharedProjectFromGroup(d.Id(), *group.GroupID)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Share project with groups from the new config
-	shareWithGroupOptions := expandSharedWithGroupsOptions(d.Get("shared_with_groups").([]interface{}))
-	for _, group := range shareWithGroupOptions {
-		log.Printf("[DEBUG] update shared_with_group: share %v", group)
+	// Share groups to add and update
+	for _, group := range groupsToShare {
+		log.Printf("[DEBUG] update shared_with_group: share %d", *group.GroupID)
 		_, err := client.Projects.ShareProjectWithGroup(d.Id(), group)
 		if err != nil {
 			return err
