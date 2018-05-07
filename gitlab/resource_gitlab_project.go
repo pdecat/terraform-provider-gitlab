@@ -104,11 +104,6 @@ func resourceGitlabProject() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{
 								"guest", "reporter", "developer", "master"}, false),
 						},
-						"expires_at": {
-							Type:             schema.TypeString,
-							Optional:         true,
-							DiffSuppressFunc: suppressDiffSharedWithGroupsExpiresAt(),
-						},
 						"group_name": {
 							Type:     schema.TypeString,
 							Computed: true,
@@ -310,7 +305,6 @@ func expandSharedWithGroupsOptions(d []interface{}) []*gitlab.ShareWithGroupOpti
 		shareWithGroupOptions := &gitlab.ShareWithGroupOptions{
 			GroupID:     gitlab.Int(data["group_id"].(int)),
 			GroupAccess: &groupAccess,
-			ExpiresAt:   gitlab.String(data["expires_at"].(string)),
 		}
 
 		shareWithGroupOptionsList = append(shareWithGroupOptionsList,
@@ -364,11 +358,4 @@ func updateSharedWithGroups(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
-}
-
-func suppressDiffSharedWithGroupsExpiresAt() schema.SchemaDiffSuppressFunc {
-	return func(k, old, new string, d *schema.ResourceData) bool {
-		// API doesn't return expires_at parameter, so the diff should be removed
-		return true
-	}
 }
