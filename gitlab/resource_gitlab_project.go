@@ -300,7 +300,7 @@ func expandSharedWithGroupsOptions(d []interface{}) []*gitlab.ShareWithGroupOpti
 	for _, config := range d {
 		data := config.(map[string]interface{})
 
-		groupAccess := accessLevelID[data["group_access_level"].(string)]
+		groupAccess := accessLevelNameToValue[data["group_access_level"].(string)]
 
 		shareWithGroupOptions := &gitlab.ShareWithGroupOptions{
 			GroupID:     gitlab.Int(data["group_id"].(int)),
@@ -320,9 +320,10 @@ func flattenSharedWithGroupsOptions(project *gitlab.Project) []interface{} {
 
 	for _, option := range sharedWithGroups {
 		values := map[string]interface{}{
-			"group_id":           option.GroupID,
-			"group_access_level": accessLevel[gitlab.AccessLevelValue(option.GroupAccessLevel)],
-			"group_name":         option.GroupName,
+			"group_id": option.GroupID,
+			"group_access_level": accessLevelValueToName[gitlab.AccessLevelValue(
+				option.GroupAccessLevel)],
+			"group_name": option.GroupName,
 		}
 
 		sharedWithGroupsList = append(sharedWithGroupsList, values)
