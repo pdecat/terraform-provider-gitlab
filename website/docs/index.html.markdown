@@ -52,6 +52,11 @@ resource "gitlab_project" "sample_group_project" {
     name = "example"
     namespace_id = "${gitlab_group.sample_group.id}"
 }
+
+# Get user data
+data "gitlab_user" "sample_user_data" {
+    user_id = 3
+}
 ```
 
 ## Argument Reference
