@@ -30,8 +30,11 @@ to add new and/or missing endpoints. Currently the following services are suppor
 - [x] Deployments
 - [x] Deploy Keys
 - [x] Environments
+- [ ] Epics
+- [ ] Epic Issues
 - [x] Events
 - [x] Feature flags
+- [ ] Geo Nodes
 - [x] Gitignores templates
 - [ ] GitLab CI Config templates
 - [x] Groups
@@ -42,19 +45,24 @@ to add new and/or missing endpoints. Currently the following services are suppor
 - [x] Jobs
 - [ ] Keys
 - [x] Labels
+- [ ] License
 - [x] Merge Requests
+- [ ] Merge Request Approvals
 - [x] Project Milestones
 - [ ] Group Milestones
 - [x] Namespaces
 - [x] Notes (comments)
+- [ ] Discussions (threaded comments)
 - [x] Notification settings
 - [ ] Open source license templates
-- [x] Page Domains
+- [x] Pages Domains
 - [x] Pipelines
 - [x] Pipeline Triggers
 - [x] Pipeline Schedules
 - [x] Projects (including setting Webhooks)
 - [ ] Project Access Requests
+- [ ] Project badges
+- [ ] Project import/export
 - [x] Project Members
 - [x] Project Snippets
 - [x] Protected Branches
@@ -122,7 +130,7 @@ func main() {
 		Description:          gitlab.String("Just a test project to play with"),
 		MergeRequestsEnabled: gitlab.Bool(true),
 		SnippetsEnabled:      gitlab.Bool(true),
-		Visibility:           gitlab.VisibilityLevel(gitlab.PublicVisibility),
+		Visibility:           gitlab.Visibility(gitlab.PublicVisibility),
 	}
 	project, _, err := git.Projects.CreateProject(p)
 	if err != nil {
@@ -130,11 +138,11 @@ func main() {
 	}
 
 	// Add a new snippet
-	s := &gitlab.CreateSnippetOptions{
+	s := &gitlab.CreateProjectSnippetOptions{
 		Title:           gitlab.String("Dummy Snippet"),
 		FileName:        gitlab.String("snippet.go"),
 		Code:            gitlab.String("package main...."),
-		Visibility:      gitlab.VisibilityLevel(gitlab.PublicVisibility),
+		Visibility:      gitlab.Visibility(gitlab.PublicVisibility),
 	}
 	_, _, err = git.ProjectSnippets.CreateSnippet(project.ID, s)
 	if err != nil {
