@@ -32,4 +32,8 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("GITLAB_TOKEN"); v == "" {
 		t.Fatal("GITLAB_TOKEN must be set for acceptance tests")
 	}
+
+	if v := os.Getenv("GITLAB_USER_ID"); v == "" {
+		t.Log("GITLAB_USER_ID must be set for group_members acceptance tests")
+	}
 }
