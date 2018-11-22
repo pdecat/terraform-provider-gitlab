@@ -42,30 +42,30 @@ type Issue struct {
 	ProjectID int        `json:"project_id"`
 	Milestone *Milestone `json:"milestone"`
 	Author    struct {
-		ID        int        `json:"id"`
-		Username  string     `json:"username"`
-		Email     string     `json:"email"`
-		Name      string     `json:"name"`
-		State     string     `json:"state"`
-		CreatedAt *time.Time `json:"created_at"`
+		ID        int    `json:"id"`
+		State     string `json:"state"`
+		WebURL    string `json:"web_url"`
+		Name      string `json:"name"`
+		AvatarURL string `json:"avatar_url"`
+		Username  string `json:"username"`
 	} `json:"author"`
 	Description string `json:"description"`
 	State       string `json:"state"`
 	Assignees   []struct {
-		ID        int        `json:"id"`
-		Username  string     `json:"username"`
-		Email     string     `json:"email"`
-		Name      string     `json:"name"`
-		State     string     `json:"state"`
-		CreatedAt *time.Time `json:"created_at"`
+		ID        int    `json:"id"`
+		State     string `json:"state"`
+		WebURL    string `json:"web_url"`
+		Name      string `json:"name"`
+		AvatarURL string `json:"avatar_url"`
+		Username  string `json:"username"`
 	} `json:"assignees"`
 	Assignee struct {
 		ID        int    `json:"id"`
-		Name      string `json:"name"`
-		Username  string `json:"username"`
 		State     string `json:"state"`
-		AvatarURL string `json:"avatar_url"`
 		WebURL    string `json:"web_url"`
+		Name      string `json:"name"`
+		AvatarURL string `json:"avatar_url"`
+		Username  string `json:"username"`
 	} `json:"assignee"`
 	Upvotes          int        `json:"upvotes"`
 	Downvotes        int        `json:"downvotes"`
@@ -305,7 +305,7 @@ func (s *IssuesService) CreateIssue(pid interface{}, opt *CreateIssueOptions, op
 
 // UpdateIssueOptions represents the available UpdateIssue() options.
 //
-// GitLab API docs: https://docs.gitlab.com/ce/api/issues.html#edit-issues
+// GitLab API docs: https://docs.gitlab.com/ee/api/issues.html#edit-issue
 type UpdateIssueOptions struct {
 	Title            *string    `url:"title,omitempty" json:"title,omitempty"`
 	Description      *string    `url:"description,omitempty" json:"description,omitempty"`
@@ -316,6 +316,7 @@ type UpdateIssueOptions struct {
 	StateEvent       *string    `url:"state_event,omitempty" json:"state_event,omitempty"`
 	UpdatedAt        *time.Time `url:"updated_at,omitempty" json:"updated_at,omitempty"`
 	DueDate          *ISOTime   `url:"due_date,omitempty" json:"due_date,omitempty"`
+	Weight           *int       `url:"weight,omitempty" json:"weight,omitempty"`
 	DiscussionLocked *bool      `url:"discussion_locked,omitempty" json:"discussion_locked,omitempty"`
 }
 
@@ -360,6 +361,60 @@ func (s *IssuesService) DeleteIssue(pid interface{}, issue int, options ...Optio
 	}
 
 	return s.client.Do(req, nil)
+}
+
+// SubscribeToIssue subscribes the authenticated user to the given issue to
+// receive notifications. If the user is already subscribed to the issue, the
+// status code 304 is returned.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ce/api/merge_requests.html#subscribe-to-a-merge-request
+func (s *IssuesService) SubscribeToIssue(pid interface{}, issue int, options ...OptionFunc) (*Issue, *Response, error) {
+	project, err := parseID(pid)
+	if err != nil {
+		return nil, nil, err
+	}
+	u := fmt.Sprintf("projects/%s/issues/%d/subscribe", url.QueryEscape(project), issue)
+
+	req, err := s.client.NewRequest("POST", u, nil, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	i := new(Issue)
+	resp, err := s.client.Do(req, i)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return i, resp, err
+}
+
+// UnsubscribeFromIssue unsubscribes the authenticated user from the given
+// issue to not receive notifications from that merge request. If the user
+// is not subscribed to the issue, status code 304 is returned.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ce/api/merge_requests.html#unsubscribe-from-a-merge-request
+func (s *IssuesService) UnsubscribeFromIssue(pid interface{}, issue int, options ...OptionFunc) (*Issue, *Response, error) {
+	project, err := parseID(pid)
+	if err != nil {
+		return nil, nil, err
+	}
+	u := fmt.Sprintf("projects/%s/issues/%d/unsubscribe", url.QueryEscape(project), issue)
+
+	req, err := s.client.NewRequest("POST", u, nil, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	i := new(Issue)
+	resp, err := s.client.Do(req, i)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return i, resp, err
 }
 
 // ListMergeRequestsClosingIssueOptions represents the available
