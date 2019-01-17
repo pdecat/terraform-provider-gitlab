@@ -26,6 +26,8 @@ builds:
         goarch: arm
       - goos: solaris
         goarch: arm
+      - goos: freebsd
+        goarch: arm
 
 archive:
   format: zip
