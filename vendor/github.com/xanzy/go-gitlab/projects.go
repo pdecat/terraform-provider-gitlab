@@ -74,12 +74,12 @@ type Project struct {
 	ForksCount                                int               `json:"forks_count"`
 	StarCount                                 int               `json:"star_count"`
 	RunnersToken                              string            `json:"runners_token"`
-	PublicJobs                                bool              `json:"public_jobs"`
+	PublicBuilds                              bool              `json:"public_builds"`
 	OnlyAllowMergeIfPipelineSucceeds          bool              `json:"only_allow_merge_if_pipeline_succeeds"`
 	OnlyAllowMergeIfAllDiscussionsAreResolved bool              `json:"only_allow_merge_if_all_discussions_are_resolved"`
 	LFSEnabled                                bool              `json:"lfs_enabled"`
 	RequestAccessEnabled                      bool              `json:"request_access_enabled"`
-	MergeMethod                               string            `json:"merge_method"`
+	MergeMethod                               MergeMethodValue  `json:"merge_method"`
 	ForkedFromProject                         *ForkParent       `json:"forked_from_project"`
 	SharedWithGroups                          []struct {
 		GroupID          int    `json:"group_id"`
@@ -418,7 +418,7 @@ type CreateProjectOptions struct {
 	SharedRunnersEnabled                      *bool             `url:"shared_runners_enabled,omitempty" json:"shared_runners_enabled,omitempty"`
 	Visibility                                *VisibilityValue  `url:"visibility,omitempty" json:"visibility,omitempty"`
 	ImportURL                                 *string           `url:"import_url,omitempty" json:"import_url,omitempty"`
-	PublicJobs                                *bool             `url:"public_jobs,omitempty" json:"public_jobs,omitempty"`
+	PublicBuilds                              *bool             `url:"public_builds,omitempty" json:"public_builds,omitempty"`
 	OnlyAllowMergeIfPipelineSucceeds          *bool             `url:"only_allow_merge_if_pipeline_succeeds,omitempty" json:"only_allow_merge_if_pipeline_succeeds,omitempty"`
 	OnlyAllowMergeIfAllDiscussionsAreResolved *bool             `url:"only_allow_merge_if_all_discussions_are_resolved,omitempty" json:"only_allow_merge_if_all_discussions_are_resolved,omitempty"`
 	MergeMethod                               *MergeMethodValue `url:"merge_method,omitempty" json:"merge_method,omitempty"`
@@ -1171,4 +1171,112 @@ func (s *ProjectsService) DeleteProjectPushRule(pid interface{}, options ...Opti
 	}
 
 	return s.client.Do(req, nil)
+}
+
+// ProjectApprovals represents GitLab project level merge request approvals.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#project-level-mr-approvals
+type ProjectApprovals struct {
+	Approvers                                 []*MergeRequestApproverUser  `json:"approvers"`
+	ApproverGroups                            []*MergeRequestApproverGroup `json:"approver_groups"`
+	ApprovalsBeforeMerge                      int                          `json:"approvals_before_merge"`
+	ResetApprovalsOnPush                      bool                         `json:"reset_approvals_on_push"`
+	DisableOverridingApproversPerMergeRequest bool                         `json:"disable_overriding_approvers_per_merge_request"`
+}
+
+// GetApprovalConfiguration get the approval configuration for a project.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#get-configuration
+func (s *ProjectsService) GetApprovalConfiguration(pid interface{}, options ...OptionFunc) (*ProjectApprovals, *Response, error) {
+	project, err := parseID(pid)
+	if err != nil {
+		return nil, nil, err
+	}
+	u := fmt.Sprintf("projects/%s/approvals", url.QueryEscape(project))
+
+	req, err := s.client.NewRequest("GET", u, nil, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pa := new(ProjectApprovals)
+	resp, err := s.client.Do(req, pa)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return pa, resp, err
+}
+
+// ChangeApprovalConfigurationOptions represents the available
+// ApprovalConfiguration() options.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#change-configuration
+type ChangeApprovalConfigurationOptions struct {
+	ApprovalsBeforeMerge                      *int  `url:"approvals_before_merge,omitempty" json:"approvals_before_merge,omitempty"`
+	ResetApprovalsOnPush                      *bool `url:"reset_approvals_on_push,omitempty" json:"reset_approvals_on_push,omitempty"`
+	DisableOverridingApproversPerMergeRequest *bool `url:"disable_overriding_approvers_per_merge_request,omitempty" json:"disable_overriding_approvers_per_merge_request,omitempty"`
+}
+
+// ChangeApprovalConfiguration updates the approval configuration for a project.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#change-configuration
+func (s *ProjectsService) ChangeApprovalConfiguration(pid interface{}, opt *ChangeApprovalConfigurationOptions, options ...OptionFunc) (*ProjectApprovals, *Response, error) {
+	project, err := parseID(pid)
+	if err != nil {
+		return nil, nil, err
+	}
+	u := fmt.Sprintf("projects/%s/approvals", url.QueryEscape(project))
+
+	req, err := s.client.NewRequest("POST", u, opt, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pa := new(ProjectApprovals)
+	resp, err := s.client.Do(req, pa)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return pa, resp, err
+}
+
+// ChangeAllowedApproversOptions represents the available ChangeAllowedApprovers()
+// options.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#change-allowed-approvers
+type ChangeAllowedApproversOptions struct {
+	ApproverIDs      []*int `url:"approver_ids,omitempty" json:"approver_ids,omitempty"`
+	ApproverGroupIDs []*int `url:"approver_group_ids,omitempty" json:"approver_group_ids,omitempty"`
+}
+
+// ChangeAllowedApprovers updates the list of approvers and approver groups.
+//
+// GitLab API docs:
+// https://docs.gitlab.com/ee/api/merge_request_approvals.html#change-allowed-approvers
+func (s *ProjectsService) ChangeAllowedApprovers(pid interface{}, opt *ChangeAllowedApproversOptions, options ...OptionFunc) (*ProjectApprovals, *Response, error) {
+	project, err := parseID(pid)
+	if err != nil {
+		return nil, nil, err
+	}
+	u := fmt.Sprintf("projects/%s/approvers", url.QueryEscape(project))
+
+	req, err := s.client.NewRequest("POST", u, opt, options)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pa := new(ProjectApprovals)
+	resp, err := s.client.Do(req, pa)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return pa, resp, err
 }
