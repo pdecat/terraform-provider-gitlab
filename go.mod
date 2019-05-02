@@ -1,4 +1,4 @@
-module github.com/terraform-providers/terraform-provider-gitlab
+module github.com/claranet/terraform-provider-gitlab
 
 require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
