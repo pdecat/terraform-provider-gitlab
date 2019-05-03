@@ -34,7 +34,7 @@ func resourceGitlabGroupMembers() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ValidateFunc: validation.StringInSlice(
-					[]string{"guest", "reporter", "developer", "master", "owner"}, true),
+					[]string{"guest", "reporter", "developer", "master", "owner", "maintainer"}, true),
 			},
 			"expires_at": {
 				Type:     schema.TypeString,
@@ -53,7 +53,7 @@ func resourceGitlabGroupMembers() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 							ValidateFunc: validation.StringInSlice(
-								[]string{"guest", "reporter", "developer", "master", "owner"}, true),
+								[]string{"guest", "reporter", "developer", "master", "owner", "maintainer"}, true),
 							DiffSuppressFunc: suppressDiffMembersAccessLevel(),
 						},
 						"expires_at": {
@@ -335,7 +335,16 @@ func suppressDiffMembersAccessLevel() schema.SchemaDiffSuppressFunc {
 		// If access_level is not defined at members' level, use global
 		// access_level for comparison
 		if new == "" {
-			return d.Get("access_level") == old
+			globalAccessLevel := d.Get("access_level") == old
+			// Suppress diff between deprecated "master" access level and its new name "maintainer"
+			masterAccessLevel := d.Get("access_level") == "master" && old == "maintainer"
+
+			return globalAccessLevel || masterAccessLevel
+		}
+
+		// Suppress diff between deprecated "master" access level and its new name "maintainer"
+		if new == "master" && old == "maintainer" {
+			return true
 		}
 
 		return false
