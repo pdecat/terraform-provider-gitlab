@@ -53,15 +53,15 @@ resource "gitlab_group_members" "test-group-members" {
 	group_owner_id = %s
 	access_level   = "developer"
 
-  members  = [
-		{
-      id           = %s
-      access_level = "owner"
-		},
-    {
-      id           = "${gitlab_user.test-user.id}"
-    }
-  ]
+  members {
+    id           = %s
+    access_level = "owner"
+	}
+
+  members {
+    id           = "${gitlab_user.test-user.id}"
+	}
+
 }
 
 resource "gitlab_group" "test-group" {
@@ -87,16 +87,16 @@ resource "gitlab_group_members" "test-group-members" {
 	group_owner_id = %s
 	access_level   = "guest"
 
-  members  = [
-		{
-      id           = %s
-      access_level = "owner"
-		},
-    {
-      id = "${gitlab_user.test-user.id}"
-      expires_at   = "2099-01-01"
-    }
-  ]
+  members {
+    id           = %s
+    access_level = "owner"
+	}
+
+	members {
+    id = "${gitlab_user.test-user.id}"
+    expires_at   = "2099-01-01"
+  }
+
 }
 
 resource "gitlab_group" "test-group" {
