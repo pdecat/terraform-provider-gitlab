@@ -48,6 +48,15 @@ func TestAccDataSourceGitlabUsers_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.gitlab_users.foo", "users.#", "99"),
 				),
 			},
+			{
+				Config: testAccDataSourceGitlabExternalUsers(rInt),
+			},
+			{
+				Config: testAccDataSourceGitlabExternalUsersSearch(rInt),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.gitlab_users.only_external", "users.#", "10"),
+				),
+			},
 		},
 	})
 }
@@ -140,4 +149,31 @@ data "gitlab_users" "foo" {
 	search = "lots"
 }
 	`, testAccDataSourceGitlabLotsOfUsers())
+}
+
+func testAccDataSourceGitlabExternalUsers(rInt int) string {
+	return fmt.Sprintf(`
+resource "gitlab_user" "external" {
+  name             = format("ext user%%02d%d", count.index+1)
+  username         = format("ext%%02d%d", count.index+1)
+  email            = format("ext%%02d%d@example.com", count.index+1)
+  password         = "8characters"
+  is_external      = true
+  count            = 10
+}
+resource "gitlab_user" "internal" {
+  name             = format("int user%%02d%d", count.index+1)
+  username         = format("int%%02d%d", count.index+1)
+  email            = format("int%%02d%d@example.com", count.index+1)
+  password         = "8characters"
+  count            = 10
+}`, rInt, rInt, rInt, rInt, rInt, rInt)
+}
+
+func testAccDataSourceGitlabExternalUsersSearch(rInt int) string {
+	return fmt.Sprintf(`%v
+data "gitlab_users" "only_external" {
+	external = true
+}
+	`, testAccDataSourceGitlabExternalUsers(rInt))
 }
