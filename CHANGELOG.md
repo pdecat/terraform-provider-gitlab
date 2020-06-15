@@ -1,4 +1,15 @@
 ## 2.11.0 (Unreleased)
+
+## 2.10.0-claranet (June 15, 2020)
+
+Based on official 2.10.0 tag, only differences are:
+
+FEATURES:
+* **New Resource:** `gitlab_group_members`
+* **New Resource:** `gitlab_user_impersonation_token`
+* Implement `subgroup_creation_level` and `project_creation_level` parameters for `gitlab_group` resource
+* Implement `external` filter in `gitlab_users` datasource
+
 ## 2.10.0 (June 09, 2020)
 
 FEATURES:
